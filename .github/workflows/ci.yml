@@ -19,6 +19,11 @@ jobs:
         with:
           go-version: '1.22'
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libportaudio2 libopus0 libopusfile0 pkg-config
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:
