@@ -26,7 +26,7 @@ Usage:
   audiobridge devices                       # List available audio devices
   audiobridge status                        # Show connection status
 
-For more information, visit: https://github.com/audiobridge/audiobridge`,
+For more information, visit: https://github.com/jasontiw/audiobridge`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		setupLogging()
 	},
