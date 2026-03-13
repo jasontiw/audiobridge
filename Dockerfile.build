@@ -1,0 +1,90 @@
+# Dockerfile para compilación cruzada de AudioBridge
+# Produce binarios estáticos para Windows, macOS y Linux
+
+# === Windows AMD64 ===
+FROM golang:1.22-bookworm AS build-windows-amd64
+
+RUN apt-get update && apt-get install -y \
+    mingw-w64 \
+    libportaudio2 \
+    libopus0 \
+    libopusfile0 \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . .
+
+# Build Windows AMD64 (static)
+ENV CGO_ENABLED=1
+ENV GOOS=windows
+ENV GOARCH=amd64
+RUN go build -ldflags="-s -w" -o audiobridge.exe .
+
+# === Linux AMD64 ===
+FROM golang:1.22-bookworm AS build-linux-amd64
+
+RUN apt-get update && apt-get install -y \
+    libportaudio2 \
+    libopus0 \
+    libopusfile0 \
+    pkg-config \
+    libc6-dev \
+    libasound2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . .
+
+ENV CGO_ENABLED=1
+ENV GOOS=linux
+ENV GOARCH=amd64
+RUN go build -ldflags="-s -w" -o audiobridge-linux-amd64 .
+
+# === macOS ARM64 ===
+FROM golang:1.22-bookworm AS build-darwin-arm64
+
+RUN apt-get update && apt-get install -y \
+    libportaudio2 \
+    libopus0 \
+    libopusfile0 \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . .
+
+ENV CGO_ENABLED=1
+ENV GOOS=darwin
+ENV GOARCH=arm64
+RUN CGO_LDFLAGS="-framework CoreAudio -framework AudioToolbox -lportaudio -lopus" \
+    go build -ldflags="-s -w" -o audiobridge-darwin-arm64 .
+
+# === macOS AMD64 ===
+FROM golang:1.22-bookworm AS build-darwin-amd64
+
+RUN apt-get update && apt-get install -y \
+    libportaudio2 \
+    libopus0 \
+    libopusfile0 \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . .
+
+ENV CGO_ENABLED=1
+ENV GOOS=darwin
+ENV GOARCH=amd64
+RUN CGO_LDFLAGS="-framework CoreAudio -framework AudioToolbox -lportaudio -lopus" \
+    go build -ldflags="-s -w" -o audiobridge-darwin-amd64 .
+
+# === Artifact collector ===
+FROM scratch AS artifacts
+
+COPY --from=build-windows-amd64 /app/audiobridge.exe /audiobridge.exe
+COPY --from=build-linux-amd64 /app/audiobridge-linux-amd64 /audiobridge-linux-amd64
+COPY --from=build-darwin-arm64 /app/audiobridge-darwin-arm64 /audiobridge-darwin-arm64
+COPY --from=build-darwin-amd64 /app/audiobridge-darwin-amd64 /audiobridge-darwin-amd64
+
+CMD ["ls", "-la"]
