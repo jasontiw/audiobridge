@@ -32,6 +32,11 @@ func (c *PortAudioCapture) Start(deviceID int, sampleRate int, channels int) err
 		return fmt.Errorf("capture already started")
 	}
 
+	// Initialize PortAudio
+	if err := portaudio.Initialize(); err != nil {
+		return fmt.Errorf("failed to initialize PortAudio: %w", err)
+	}
+
 	var inputDevice *portaudio.DeviceInfo
 	var err error
 
@@ -39,14 +44,17 @@ func (c *PortAudioCapture) Start(deviceID int, sampleRate int, channels int) err
 		// Use default input device
 		inputDevice, err = portaudio.DefaultInputDevice()
 		if err != nil {
+			portaudio.Terminate()
 			return fmt.Errorf("failed to get default input device: %w", err)
 		}
 	} else {
 		devices, err := portaudio.Devices()
 		if err != nil {
+			portaudio.Terminate()
 			return fmt.Errorf("failed to get devices: %w", err)
 		}
 		if deviceID >= len(devices) {
+			portaudio.Terminate()
 			return fmt.Errorf("device index out of range: %d", deviceID)
 		}
 		inputDevice = devices[deviceID]
@@ -111,6 +119,7 @@ func (c *PortAudioCapture) Close() error {
 	defer c.mu.Unlock()
 
 	if c.stream == nil {
+		portaudio.Terminate()
 		return nil
 	}
 
@@ -119,11 +128,13 @@ func (c *PortAudioCapture) Close() error {
 
 	err := c.stream.Stop()
 	if err != nil {
+		portaudio.Terminate()
 		return fmt.Errorf("failed to stop audio stream: %w", err)
 	}
 
 	err = c.stream.Close()
 	c.stream = nil
+	portaudio.Terminate()
 
 	if err != nil {
 		return fmt.Errorf("failed to close audio stream: %w", err)

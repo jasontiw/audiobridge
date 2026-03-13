@@ -28,6 +28,11 @@ func (p *PortAudioPlayer) Start(deviceID int, sampleRate int, channels int) erro
 		return fmt.Errorf("playback already started")
 	}
 
+	// Initialize PortAudio
+	if err := portaudio.Initialize(); err != nil {
+		return fmt.Errorf("failed to initialize PortAudio: %w", err)
+	}
+
 	var outputDevice *portaudio.DeviceInfo
 	var err error
 
@@ -35,14 +40,17 @@ func (p *PortAudioPlayer) Start(deviceID int, sampleRate int, channels int) erro
 		// Use default output device
 		outputDevice, err = portaudio.DefaultOutputDevice()
 		if err != nil {
+			portaudio.Terminate()
 			return fmt.Errorf("failed to get default output device: %w", err)
 		}
 	} else {
 		devices, err := portaudio.Devices()
 		if err != nil {
+			portaudio.Terminate()
 			return fmt.Errorf("failed to get devices: %w", err)
 		}
 		if deviceID >= len(devices) {
+			portaudio.Terminate()
 			return fmt.Errorf("device index out of range: %d", deviceID)
 		}
 		outputDevice = devices[deviceID]
@@ -110,17 +118,20 @@ func (p *PortAudioPlayer) Close() error {
 	defer p.mu.Unlock()
 
 	if p.stream == nil {
+		portaudio.Terminate()
 		return nil
 	}
 
 	p.closed = true
 	err := p.stream.Stop()
 	if err != nil {
+		portaudio.Terminate()
 		return fmt.Errorf("failed to stop audio stream: %w", err)
 	}
 
 	err = p.stream.Close()
 	p.stream = nil
+	portaudio.Terminate()
 
 	if err != nil {
 		return fmt.Errorf("failed to close audio stream: %w", err)
