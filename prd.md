@@ -3,7 +3,7 @@
 **Versión:** 0.2-draft  
 **Fecha:** 2026-03-13  
 **Estado:** En revisión  
-**Autor:** Por definir
+**Autor:** @Jasontiw
 
 ---
 
