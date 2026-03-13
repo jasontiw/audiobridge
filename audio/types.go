@@ -16,7 +16,7 @@ const (
 type Device struct {
 	Index             int
 	Name              string
-	HostAPI           string
+	HostAPI           interface{} // Can be string or *HostApiInfo depending on portaudio version
 	MaxInputChannels  int
 	MaxOutputChannels int
 	DefaultSampleRate float64

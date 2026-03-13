@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libportaudio2 libopus0 libopusfile0 pkg-config
+          sudo apt-get install -y portaudio libasound2-dev libopus0 libopusfile0 pkg-config
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v4
@@ -48,7 +48,7 @@ jobs:
       - name: Install dependencies (Linux)
         run: |
           sudo apt-get update
-          sudo apt-get install -y libportaudio2 libopus0 libopusfile0 pkg-config
+          sudo apt-get install -y portaudio libasound2-dev libopus0 libopusfile0 pkg-config
 
       - name: Build
         env:

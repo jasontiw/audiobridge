@@ -26,7 +26,7 @@ func ListInputDevices() ([]Device, error) {
 			inputDevices = append(inputDevices, Device{
 				Index:             i,
 				Name:              dev.Name,
-				HostAPI:           dev.HostAPI,
+				HostAPI:           dev.HostApi,
 				MaxInputChannels:  dev.MaxInputChannels,
 				MaxOutputChannels: dev.MaxOutputChannels,
 				DefaultSampleRate: dev.DefaultSampleRate,
@@ -55,7 +55,7 @@ func ListOutputDevices() ([]Device, error) {
 			outputDevices = append(outputDevices, Device{
 				Index:             i,
 				Name:              dev.Name,
-				HostAPI:           dev.HostAPI,
+				HostAPI:           dev.HostApi,
 				MaxInputChannels:  dev.MaxInputChannels,
 				MaxOutputChannels: dev.MaxOutputChannels,
 				DefaultSampleRate: dev.DefaultSampleRate,

@@ -4,15 +4,17 @@ package audio
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/gordonklaus/portaudio"
 )
 
 // PortAudioPlayer implements AudioPlayer using PortAudio
 type PortAudioPlayer struct {
-	stream *portaudio.Stream
-	closed bool
-	buffer []float32
+	stream       *portaudio.Stream
+	closed       bool
+	mu           sync.Mutex
+	callbackData []float32
 }
 
 // NewPortAudioPlayer creates a new PortAudio player instance
@@ -48,9 +50,10 @@ func (p *PortAudioPlayer) Start(deviceID int, sampleRate int, channels int) erro
 
 	// Calculate buffer size for ~10ms of audio
 	framesPerBuffer := sampleRate / 100 // 10ms
-	p.buffer = make([]float32, framesPerBuffer*channels)
+	p.callbackData = make([]float32, framesPerBuffer*channels)
 
-	stream, err := portaudio.OpenStream(p.buffer, portaudio.StreamParameters{
+	// Use the callback-based API
+	stream, err := portaudio.OpenStream(portaudio.StreamParameters{
 		Output: portaudio.StreamDeviceParameters{
 			Device:   outputDevice,
 			Channels: channels,
@@ -58,6 +61,15 @@ func (p *PortAudioPlayer) Start(deviceID int, sampleRate int, channels int) erro
 		},
 		SampleRate:      float64(sampleRate),
 		FramesPerBuffer: framesPerBuffer,
+	}, func(in, out []float32) {
+		// Copy data from callback buffer to output
+		p.mu.Lock()
+		copy(out, p.callbackData)
+		// Fill with silence for next callback
+		for i := range p.callbackData {
+			p.callbackData[i] = 0
+		}
+		p.mu.Unlock()
 	})
 	if err != nil {
 		return fmt.Errorf("failed to open audio stream: %w", err)
@@ -68,7 +80,7 @@ func (p *PortAudioPlayer) Start(deviceID int, sampleRate int, channels int) erro
 	if err := stream.Start(); err != nil {
 		stream.Close()
 		p.stream = nil
-		return fmt.Errorf("failed to start audio stream: %w", err)
+		return fmt.Errorf("failed to start playback: %w", err)
 	}
 
 	return nil
@@ -80,17 +92,23 @@ func (p *PortAudioPlayer) Write(frame []float32) error {
 		return fmt.Errorf("playback not started")
 	}
 
-	// Copy frame data to buffer (will be written on next callback)
-	if len(frame) > len(p.buffer) {
-		frame = frame[:len(p.buffer)]
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	// Copy frame data to callback buffer
+	if len(frame) > len(p.callbackData) {
+		frame = frame[:len(p.callbackData)]
 	}
-	copy(p.buffer, frame)
+	copy(p.callbackData, frame)
 
 	return nil
 }
 
 // Close stops playback and releases resources
 func (p *PortAudioPlayer) Close() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	if p.stream == nil {
 		return nil
 	}

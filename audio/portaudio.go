@@ -4,16 +4,19 @@ package audio
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/gordonklaus/portaudio"
 )
 
 // PortAudioCapture implements AudioCapture using PortAudio
 type PortAudioCapture struct {
-	stream *portaudio.Stream
-	buffer []float32
-	closed bool
-	done   chan struct{}
+	stream       *portaudio.Stream
+	buffer       []float32
+	closed       bool
+	done         chan struct{}
+	mu           sync.Mutex
+	callbackData []float32
 }
 
 // NewPortAudioCapture creates a new PortAudio capture instance
@@ -51,8 +54,9 @@ func (c *PortAudioCapture) Start(deviceID int, sampleRate int, channels int) err
 
 	// Calculate buffer size for ~10ms of audio
 	framesPerBuffer := sampleRate / 100 // 10ms
-	c.buffer = make([]float32, framesPerBuffer*channels)
+	c.callbackData = make([]float32, framesPerBuffer*channels)
 
+	// Use the callback-based API
 	stream, err := portaudio.OpenStream(portaudio.StreamParameters{
 		Input: portaudio.StreamDeviceParameters{
 			Device:   inputDevice,
@@ -61,7 +65,15 @@ func (c *PortAudioCapture) Start(deviceID int, sampleRate int, channels int) err
 		},
 		SampleRate:      float64(sampleRate),
 		FramesPerBuffer: framesPerBuffer,
-	}, c.buffer)
+	}, func(in, out []float32) {
+		// Copy input data to callback buffer
+		c.mu.Lock()
+		if len(in) > len(c.callbackData) {
+			in = in[:len(c.callbackData)]
+		}
+		copy(c.callbackData, in)
+		c.mu.Unlock()
+	})
 	if err != nil {
 		return fmt.Errorf("failed to open audio stream: %w", err)
 	}
@@ -83,16 +95,21 @@ func (c *PortAudioCapture) Read() ([]float32, error) {
 		return nil, fmt.Errorf("capture not started")
 	}
 
-	// With the callback approach, data is already in c.buffer
-	// Just copy and return
-	result := make([]float32, len(c.buffer))
-	copy(result, c.buffer)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Copy data from callback buffer
+	result := make([]float32, len(c.callbackData))
+	copy(result, c.callbackData)
 
 	return result, nil
 }
 
 // Close stops capture and releases resources
 func (c *PortAudioCapture) Close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if c.stream == nil {
 		return nil
 	}
