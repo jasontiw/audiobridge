@@ -21,14 +21,15 @@ jobs:
             goos: linux
             goarch: amd64
             ext: ''
-          - os: macos-latest
-            goos: darwin
-            goarch: amd64
-            ext: ''
-          - os: macos-latest
-            goos: darwin
-            goarch: arm64
-            ext: ''
+          # TODO: Enable macOS builds once we have proper cross-compilation setup
+          # - os: macos-latest
+          #   goos: darwin
+          #   goarch: amd64
+          #   ext: ''
+          # - os: macos-latest
+          #   goos: darwin
+          #   goarch: arm64
+          #   ext: ''
 
     steps:
       - name: Checkout

@@ -1,6 +1,6 @@
 module github.com/audiobridge/audiobridge
 
-go 1.26.1
+go 1.22
 
 require (
 	github.com/gordonklaus/portaudio v0.0.0-20260203164431-765aa7dfa631
