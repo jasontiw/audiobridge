@@ -13,23 +13,15 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: windows-latest
-            goos: windows
-            goarch: amd64
-            ext: .exe
           - os: ubuntu-latest
             goos: linux
             goarch: amd64
             ext: ''
-          # TODO: Enable macOS builds once we have proper cross-compilation setup
-          # - os: macos-latest
-          #   goos: darwin
+          # Windows builds require local MSYS2 setup - uncomment when ready
+          # - os: windows-latest
+          #   goos: windows
           #   goarch: amd64
-          #   ext: ''
-          # - os: macos-latest
-          #   goos: darwin
-          #   goarch: arm64
-          #   ext: ''
+          #   ext: .exe
 
     steps:
       - name: Checkout
@@ -41,10 +33,9 @@ jobs:
           go-version: '1.22'
 
       - name: Install dependencies (Ubuntu)
-        if: matrix.goos == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libportaudio2 libopus0 libopusfile0
+          sudo apt-get install -y libportaudio2 libopus0 libopusfile0 pkg-config
 
       - name: Build
         env:

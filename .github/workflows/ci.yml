@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [linux, windows]
+        goos: [linux]
         goarch: [amd64]
     steps:
       - name: Checkout code
@@ -40,10 +40,16 @@ jobs:
         with:
           go-version: '1.22'
 
+      - name: Install dependencies (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libportaudio2 libopus0 libopusfile0 pkg-config
+
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 1
         run: |
           go build -o audiobridge-${{ matrix.goos }}-${{ matrix.goarch }}
 
